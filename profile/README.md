@@ -1,12 +1,9 @@
-## Hi there 👋
+# SSC-SWE
 
-<!--
+Engineering organization for the SSC software projects.
 
-**Here are some ideas to get you started:**
+## Standards
 
-🙋‍♀️ A short introduction - what is your organization all about?
-🌈 Contribution guidelines - how can the community get involved?
-👩‍💻 Useful resources - where can the community find your docs? Is there anything else the community should know?
-🍿 Fun facts - what does your team eat for breakfast?
-🧙 Remember, you can do mighty things with the power of [Markdown](https://docs.github.com/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
--->
+These apply to **every repository** in this organization. Read the relevant one before starting work.
+
+- [Styling](docs/styling.md) — plain CSS, design tokens, naming conventions, and bans. **Read this before any styling or frontend work in any repo.**
