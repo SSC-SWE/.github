@@ -2,129 +2,148 @@
 
 The single source of truth for how the site is styled. This document applies to **every repo** in the site; code review enforces it. When a repo needs a new color, spacing value, or component style, add it here first, then use it.
 
+**Version 2 — Tailwind-first.** Tailwind CSS is the styling system for all new work. Repos written against v1 (plain CSS, BEM-lite) — `transcriber-web`, `landing-web` — keep their existing stylesheets until migrated; never mix the two systems inside one app.
+
 ## 1. Approach
 
-- **Plain CSS only.** No Tailwind, no CSS-in-JS (styled-components/emotion), no CSS modules, no preprocessor, no class-utility library.
-- One stylesheet per app (e.g. `src/theme.css`), imported once at the entry point (`main.tsx`).
-- All design values come from **CSS custom properties in `:root`**. No magic numbers and no hardcoded hex values in component/rule bodies.
+- **Tailwind CSS v4** is the only styling system. One entry stylesheet per app, `src/theme.css`, imported once at the entry point (`main.tsx`).
+- Install with `@tailwindcss/vite`. No `tailwind.config.js` — configuration lives in CSS (`@theme`).
+- **Components:** `shadcn/ui` primitives are vendored into `components/ui` and owned by the repo. `Arc UI` blocks from the `@uiarc` registry may be installed alongside them; the CSS modules they ship are the only CSS modules allowed.
+- **No** styled-components, emotion, styled-jsx, Sass/Less, or hand-written CSS modules.
+- Every design value comes from a token (Section 2). Utilities are the public API for those tokens.
 
 ## 2. Design tokens
 
-Tokens live in `:root`. Reference them everywhere; never write a raw value again.
+Two layers in `theme.css`: raw values in `:root`, then `@theme inline` exposing them as Tailwind utilities.
 
 ```css
+@import 'tailwindcss';
+
 :root {
   color-scheme: dark;
 
   /* Surfaces */
-  --bg: #101010;
-  --card: #171717;
-  --sidebar: #1f1f1f;
-  --button: #171717;
-  --segment-track: #101010;
+  --background: #101010;
+  --surface: #171717;
+  --surface-2: #1f1f1f;
+  --surface-3: #262626;
 
   /* Lines */
   --border: rgba(255, 255, 255, 0.09);
-  --button-border: #393939;
-
-  /* Selection */
-  --selected: rgba(255, 255, 255, 0.1);
-  --segment-selected: rgba(255, 255, 255, 0.16);
+  --border-strong: #393939;
 
   /* Text */
-  --text: #ededed;
-  --text-secondary: #a6a6a6;
-  --text-tertiary: #8a8a8a;
+  --foreground: #ededed;
+  --muted-foreground: #a6a6a6;
+  --faint-foreground: #8a8a8a;
 
   /* Semantic */
-  --danger: #ff5f57;
-  --accent: #ffffff;
+  --accent: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
 
   /* Motion */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 ```
 
 Rules for extending:
 
-- Add a token before adding a value. If a rule needs a value not in `:root`, add the token, don't inline the value.
-- Name by **role**, not by look: `--danger`, `--text-secondary`, `--border` — never `--red`, `--gray-2`, `--line-3`.
-- One accent color per app. The accent is used for focus rings, selection, and primary emphasis only.
+- **Add a token before adding a value.** If a rule needs a value not in `:root`, add the token — never inline it in a class.
+- Name by **role**, not by look: `--danger`, `--muted-foreground`, `--surface-2` — never `--red`, `--gray-2`, `--line-3`.
+- Keep the **names** stable across apps; values may differ per app (an app may choose its own accent hue and surface scale — `spark-gateway` runs a darker scale with an indigo accent). shadcn's variable names (`--color-card`, `--color-primary`, …) must be **mapped onto** these tokens, never duplicated.
+- **One accent color per app**, used for focus rings, selection and primary emphasis only. Status colors (ok/warn/danger) are for state, never decoration.
+- Native controls must render dark: `color-scheme: dark` on `:root`.
 
 ## 3. Color
 
-- Use semantic tokens (above), never raw hex in rules.
-- **Contrast (WCAG AA):** body and muted text ≥ 4.5:1 against their surface; large text (≥ 18px, or bold ≥ 14px) ≥ 3:1. Muted/hint text is not exempt — check it (current tertiary `#8a8a8a` = 5.5:1 on `#101010`).
-- `color-scheme: dark` must be set on `:root` so native controls (select popups, scrollbars, form controls) render dark instead of the OS light theme.
+- Use semantic utilities (`bg-surface`, `text-muted-foreground`, `border-border`), never raw hex in components.
+- **Contrast (WCAG AA):** body and muted text ≥ 4.5:1 against their surface; large text (≥ 18px, or bold ≥ 14px) ≥ 3:1. Muted/hint text is not exempt — check it (`#8a8a8a` = 5.5:1 on `#101010`).
+- Status color never travels alone: pair it with a label or an icon.
 
 ## 4. Typography
 
-- One font stack, defined once on `body`, system-first plus CJK fallbacks:
+- One font stack, defined once in `@theme` as `--font-sans`, system-first plus CJK fallbacks:
 
 ```css
-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto,
+--font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto,
   'Helvetica Neue', 'PingFang HK', 'PingFang TC', 'Microsoft JhengHei',
   'Noto Sans CJK TC', sans-serif;
 ```
 
-- Sizes: 11–14px for UI/hint text, 16px for card titles, 26px for the page title. Line-height 1.5 for body, 1.1–1.2 for headings.
-- Monospace (`ui-monospace, 'SF Mono', Menlo, monospace`) **only** for data that is measured — timestamps, durations, counters. Never as a stylistic choice.
+- Sizes via utilities: `text-xs` (12px) for hints and meta, `text-sm` (14px) for UI, `text-base` (16px) for card titles, and a page-title size of 26px with `tracking-tight` (add a `--text-page-title` token before reaching for an arbitrary value). Line-height 1.5 body, 1.1–1.2 headings.
+- Monospace (`--font-mono`: `ui-monospace, 'SF Mono', Menlo, monospace`) **only** for data that is measured — timestamps, durations, tokens, IDs. Never as a stylistic choice.
+- Numbers in tables and stat cards get `tabular-nums`.
 
 ## 5. Spacing & radius
 
-- Spacing in **multiples of 4px** (4, 8, 12, 16, 20, 24, 32…).
-- One radius system per app:
-  - 6px — small controls (`btn-sm`, segmented buttons)
-  - 8px — buttons, inputs, selects
-  - 12px — cards, dropzone
-  - 14px — modals/overlays
-  - 50% — circular buttons (play/pause)
+- Spacing comes from the default 4px scale (`p-2`, `gap-3`, `space-y-6`). No arbitrary spacing values.
+- Radius: `rounded-sm` 6px (small controls, segmented buttons), `rounded-md` 8px (buttons, inputs, selects), `rounded-lg` 12px (cards, dropzone), `rounded-xl` for overlays, `rounded-full` for pills and circular buttons.
 
-## 6. Naming (BEM-lite)
+## 6. Component composition
 
-kebab-case throughout.
+- **shadcn/ui primitives** live in `components/ui`. They may be edited, but only to bind tokens — never to introduce new colors or sizes.
+- **Arc UI blocks** live in `components/arc` and keep their shipped CSS modules. Do not rewrite an Arc block into Tailwind classes; compose around it.
+- Conditional classes go through `cn()` (`clsx` + `tailwind-merge`), never string concatenation:
 
-| Pattern | Meaning | Example |
-|---|---|---|
-| `block` | component root | `.sidebar`, `.card`, `.dropzone` |
-| `block-element` | part of a block | `.sidebar-item`, `.card-title`, `.segment-time` |
-| `block-element-element` | deeper part | `.sidebar-item-title`, `.sidebar-item-sub` |
-| `.active` / `.open` / `.drag` | state modifier (separate class) | `.sidebar-item.active`, `.dropzone.drag` |
-| `block-variant` | variant (suffix on the block) | `.btn-primary`, `.btn-danger`, `.btn-ghost`, `.btn-sm` |
+```tsx
+<div className={cn('rounded-md px-2 py-1', isActive && 'bg-surface-2 text-foreground')} />
+```
 
-Rules:
+- Variants use `cva`, not hand-assembled class strings:
 
-- Element names describe **role**, not color: `.card-title`, not `.card-white`.
-- States are applied by **adding a class**, not by redefining the base selector: `.sidebar-item.active`, not `.sidebar-item-active`.
-- Variants stack: `class="btn btn-primary btn-sm"` — base class always present.
+```tsx
+const button = cva('inline-flex items-center rounded-md', {
+  variants: {
+    variant: { primary: 'bg-accent text-white', ghost: 'text-muted-foreground hover:bg-surface-2' },
+    size: { sm: 'h-8 px-2.5 text-xs', md: 'h-9 px-3 text-sm' },
+  },
+  defaultVariants: { variant: 'primary', size: 'md' },
+});
+```
+
+- Layout is plain utilities in JSX. That is the system, not a violation of it.
+- Element and component names describe **role**, not color (`KeyTable`, `QuotaMeter`, not `BlueCard`).
 
 ## 7. States
 
-Every interactive element gets all five:
+Every interactive element defines all five, with variant prefixes:
 
 1. **default**
-2. **hover**
-3. **focus-visible** — a visible ring, never `outline: none` without a `:focus-visible` replacement
-4. **active** — press feedback (`transform: scale(0.97)`)
-5. **disabled** — reduced opacity + `cursor: default`
+2. `hover:` — visible but subtle
+3. `focus-visible:` — a ring from the accent token (`focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none`); never `outline-none` without a ring replacement
+4. `active:` — press feedback
+5. `disabled:` / `aria-disabled` — reduced opacity plus `cursor-not-allowed`
 
-```css
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.btn:active,
-.play-btn:active {
-  transform: scale(0.97);
-}
-```
+Component state carried on the element uses a data attribute, not a second class: `data-[state=open]:bg-surface-2`, `aria-invalid:border-danger`.
 
 ## 8. Motion
 
-- One easing token, used everywhere: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`. No `ease`, no `ease-in` on UI.
-- UI transitions stay under **300ms** and animate `transform` and `opacity` only.
-- Respect reduced motion — every animation collapses:
+- Durations: 150ms for state changes, 200ms for entrance and exit. Nothing longer for UI.
+- One easing token, `--ease-out`, applied via `ease-[var(--ease-out)]` or a component variant. No bare `ease`/`ease-in` on UI.
+- Animate `transform` and `opacity` only; never animate layout properties.
+- Respect reduced motion at the call site (`motion-safe:` / `motion-reduce:transition-none`) and keep the global override in `theme.css`:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
@@ -139,25 +158,31 @@ Every interactive element gets all five:
 
 ## 9. Bans
 
-- **No inline `style={{...}}`.** All styling via classes in the stylesheet.
-- **No `!important`**, except the reduced-motion override above.
-- **No hardcoded hex / raw values** outside `:root`.
-- **No magic z-index.** Use a documented scale (dropdown → sticky → modal → toast) and a token per level.
+- **No inline `style={{…}}`.** Two documented exceptions: a computed `width` for a progress meter, and a computed `transform` from a pointer gesture. Both carry a comment.
+- **No arbitrary values** (`bg-[#171717]`, `text-[13px]`, `p-[7px]`). If a value is missing, add a token. Allowed exceptions: percentage widths in meters and accessibility floors such as `min-h-11`.
+- **No `!important`** — including Tailwind's `!` prefix — except the reduced-motion override above.
+- **No raw hex or `rgba()` outside `theme.css`.**
+- **No magic z-index.** Use the documented scale: dropdown `z-20`, sticky header `z-30`, overlay `z-40`, modal `z-50`, toast `z-60`.
+- **No `@apply`** outside the base layer in `theme.css`; compose in the component instead.
 - **No nested cards.** Group with borders, dividers, or space.
-- **No emoji/glyphs as icons.** Use the shared SVG icon set.
+- **No emoji or glyph icons.** Use `lucide-react` (or the shared SVG set in legacy apps).
 
 ## 10. Accessibility
 
-- Focus-visible ring on every focusable element (keyboard users never see hover).
-- Labels above inputs; never placeholder-as-label.
-- Touch targets ≥ 44px.
-- Errors announced (`role="alert"` / `aria-describedby`) and shown below the field.
+- Focus-visible ring on every focusable element; keyboard users never see hover.
+- Labels above inputs (`<Label htmlFor>`); never placeholder-as-label.
+- Touch targets ≥ 44px (`min-h-11 min-w-11`) on touch surfaces.
+- Errors: `role="alert"`, `aria-invalid` on the field, `aria-describedby` pointing at the message, message below the field.
+- Icon-only buttons carry `aria-label`; decorative SVG gets `aria-hidden="true"`.
+- Charts and meters expose their value as text or `aria-valuenow` — never colour alone.
 
 ## 11. Pre-merge checklist
 
-- [ ] No inline `style={{...}}` — all classes.
-- [ ] No raw hex or magic numbers outside `:root`.
+- [ ] Tokens and utilities only — no raw hex, no arbitrary values without a documented exception.
+- [ ] Conditional classes via `cn()`; variants via `cva`.
 - [ ] Contrast passes (body ≥ 4.5:1, large ≥ 3:1).
-- [ ] All five states defined; `:focus-visible` present, no bare `outline: none`.
-- [ ] `prefers-reduced-motion` respected.
+- [ ] All five states defined; `focus-visible` ring present, no bare `outline-none`.
+- [ ] `motion-reduce` respected for any animation.
+- [ ] No inline `style` except a commented computed-value exception.
+- [ ] Icons from `lucide-react`; icon-only buttons labelled.
 - [ ] New values added to this document if the token set was extended.
